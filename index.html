@@ -120,6 +120,10 @@ ul.list li:first-child { border-top: 0; }
 .sheet .big { font-family: var(--display); font-size: 48px; line-height: 1.1; padding: 6px 14px; font-variant-numeric: tabular-nums; }
 .sheet .err { color: var(--red-on-white); font-weight: 700; font-size: 14px; min-height: 1.2em; margin: 0; }
 .sheet .go { border: 0; border-radius: 14px; min-height: 56px; font-weight: 700; font-size: 17px; color: #fff; }
+.sheet .inrow { display: flex; gap: 8px; align-items: stretch; }
+.sheet .inrow input[type=text] { flex: 1; min-width: 0; }
+.sheet .cambtn { flex: 0 0 52px; border: 2px solid var(--ink); background: var(--ink); color: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 0; }
+.sheet .cambtn:active { background: var(--white); color: var(--ink); }
 .sheet .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .sheet .chip { border: 2px solid var(--ink); background: var(--white); color: var(--ink); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 15px; font-weight: 700; min-height: 40px; }
 .sheet .chip:active { background: var(--ink); color: #fff; }
@@ -295,8 +299,9 @@ ul.list li:first-child { border-top: 0; }
     } else {
       mid = (s.edit ? '<div><label for="f-type">Soort</label><select id="f-type">' + ["klus", "uitgave", "beroep"].map(function (k) {
         return '<option value="' + k + '"' + (s.t === k ? " selected" : "") + ">" + TYPES[k].name + "</option>";
-      }).join("") + "</select></div>" : "") + '<div><label for="f-note">' + ty.lab + '</label><input id="f-note" name="omschrijving" type="text" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" maxlength="60" placeholder="' + ty.ph + '" value="' + esc(s.note || "") + '">' +
-        chips(s.t, s.note || "") + (s.t === "beroep" ? '<div class="scan"><button type="button" class="chip scanbtn" data-act="scan">Foto van product</button><input id="f-photo" type="file" accept="image/*" capture="environment" hidden></div><div id="ocr-box"></div>' : "") + "</div>";
+      }).join("") + "</select></div>" : "") + '<div><label for="f-note">' + ty.lab + '</label><div class="inrow"><input id="f-note" name="omschrijving" type="text" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" maxlength="60" placeholder="' + ty.ph + '" value="' + esc(s.note || "") + '">' +
+        (s.t === "beroep" ? '<button type="button" class="cambtn" data-act="scan" aria-label="Foto van product maken"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><input id="f-photo" type="file" accept="image/*" capture="environment" hidden>' : "") + '</div>' +
+        (s.t === "beroep" ? '<div id="ocr-box"></div>' : "") + chips(s.t, s.note || "") + "</div>";
     }
     return '<div class="scrim" data-act="close-bg"><form class="sheet" id="entry-form" role="dialog" aria-label="' + ty.name + '" novalidate>' +
       '<div class="pole"></div><h3>' + (s.edit ? "Aanpassen" : ty.name) + "</h3>" +
