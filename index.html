@@ -247,7 +247,11 @@ ul.list li:first-child { border-top: 0; }
     });
     (DEFAULTS[t] || []).forEach(function (n) { if (!seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; all.push(n); } });
     q = (q || "").trim().toLowerCase();
-    if (!q) return all.slice(0, 4);
+    if (!q) {
+      if (t !== "uitgave") return all.slice(0, 4);
+      var fixed = DEFAULTS.uitgave.slice();
+      return fixed.concat(all.filter(function (n) { return fixed.map(function (f) { return f.toLowerCase(); }).indexOf(n.toLowerCase()) < 0; })).slice(0, 10);
+    }
     var starts = all.filter(function (n) { return n.toLowerCase().indexOf(q) === 0; });
     var has = all.filter(function (n) { return n.toLowerCase().indexOf(q) > 0; });
     return starts.concat(has).filter(function (n) { return n.toLowerCase() !== q; }).slice(0, 8);
