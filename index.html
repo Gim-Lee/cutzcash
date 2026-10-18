@@ -114,6 +114,9 @@ ul.list li:first-child { border-top: 0; }
 .sheet label { font-size: 13px; font-weight: 700; color: var(--muted-on-white); display: block; margin-bottom: 4px; }
 .sheet select, .sheet input[type=text], .sheet input[type=date] { width: 100%; font: inherit; font-size: 17px; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); }
 .sheet select { appearance: none; }
+.sheet input, .sheet select { box-sizing: border-box; }
+.sheet input[type=date] { -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 100%; height: 52px; text-align: left; }
+.sheet input[type=date]::-webkit-date-and-time-value { text-align: left; }
 .sheet .big { font-family: var(--display); font-size: 48px; line-height: 1.1; padding: 6px 14px; font-variant-numeric: tabular-nums; }
 .sheet .err { color: var(--red-on-white); font-weight: 700; font-size: 14px; min-height: 1.2em; margin: 0; }
 .sheet .go { border: 0; border-radius: 14px; min-height: 56px; font-weight: 700; font-size: 17px; color: #fff; }
@@ -244,7 +247,7 @@ ul.list li:first-child { border-top: 0; }
     });
     (DEFAULTS[t] || []).forEach(function (n) { if (!seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; all.push(n); } });
     q = (q || "").trim().toLowerCase();
-    if (!q) return all.slice(0, 6);
+    if (!q) return all.slice(0, 4);
     var starts = all.filter(function (n) { return n.toLowerCase().indexOf(q) === 0; });
     var has = all.filter(function (n) { return n.toLowerCase().indexOf(q) > 0; });
     return starts.concat(has).filter(function (n) { return n.toLowerCase() !== q; }).slice(0, 8);
@@ -288,7 +291,7 @@ ul.list li:first-child { border-top: 0; }
     } else {
       mid = (s.edit ? '<div><label for="f-type">Soort</label><select id="f-type">' + ["klus", "uitgave", "beroep"].map(function (k) {
         return '<option value="' + k + '"' + (s.t === k ? " selected" : "") + ">" + TYPES[k].name + "</option>";
-      }).join("") + "</select></div>" : "") + '<div><label for="f-note">' + ty.lab + '</label><input id="f-note" type="text" autocomplete="off" maxlength="60" placeholder="' + ty.ph + '" value="' + esc(s.note || "") + '">' +
+      }).join("") + "</select></div>" : "") + '<div><label for="f-note">' + ty.lab + '</label><input id="f-note" name="omschrijving" type="text" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" maxlength="60" placeholder="' + ty.ph + '" value="' + esc(s.note || "") + '">' +
         chips(s.t, s.note || "") + (s.t === "beroep" ? '<p class="hint">Product op de verpakking? Tik in het veld en kies daarna op het toetsenbord het camera-icoon (Tekst scannen). Je telefoon leest de naam dan zelf.</p>' : "") + "</div>";
     }
     return '<div class="scrim" data-act="close-bg"><form class="sheet" id="entry-form" role="dialog" aria-label="' + ty.name + '" novalidate>' +
@@ -381,6 +384,7 @@ ul.list li:first-child { border-top: 0; }
     if (list.length > 6) h += '<button class="link more" data-act="more">' + (state.showAll ? "Toon minder" : "Toon alles (" + list.length + ")") + "</button>";
     h += '<p class="foot">' + (CAN_SYNC && state.sync ? "Je invoer staat op deze telefoon en wordt ook naar je iCloud-bestand gestuurd." : "Je invoer staat alleen op deze telefoon. Bewaar af en toe een kopie via Opties.") + "</p>";
     el.innerHTML = h + renderSheet() + renderMenu() + renderKlanten();
+    fitViewport();
     if (state.sheet && state.sheet.focus) { state.sheet.focus = false; var a = document.getElementById("f-amount"); if (a) a.focus(); }
   }
 
@@ -400,7 +404,7 @@ ul.list li:first-child { border-top: 0; }
       window.location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=" + encodeURIComponent(lines.join("\n"));
     } catch (err) {}
   }
-  function undoLine(e) { return csvLine({ d: e.d, t: e.t, n: e.n, a: -e.a }); }
+  function undoLine(e) { return csvLine({ d: e.d, t: e.t, n: e.n, a: e.a === 0 ? -0.001 : -e.a }); }
   function csvText() {
     var rows = ["Datum;Soort;Omschrijving;Bedrag"];
     sorted().reverse().filter(function (e) { return !e.ex; }).forEach(function (e) {
@@ -474,7 +478,7 @@ ul.list li:first-child { border-top: 0; }
     var date = document.getElementById("f-date").value || todayStr();
     var n = parseAmount(amount);
     s.amount = amount; s.note = note; s.date = date;
-    if (!(n > 0)) { state.error = "Vul een bedrag in, bijvoorbeeld 12,50."; render(); document.getElementById("f-amount").focus(); return; }
+    if (isNaN(n) || n < 0 || (s.t === "opzij" && n === 0)) { state.error = s.t === "opzij" ? "Vul een bedrag in, bijvoorbeeld 25." : "Vul een bedrag in, bijvoorbeeld 12,50. Een knipbeurt zonder betaling mag ook: vul 0 in."; render(); document.getElementById("f-amount").focus(); return; }
     if (n > 100000) { state.error = "Dat bedrag lijkt te groot. Controleer het even."; render(); return; }
     if (s.edit) { saveEdit(s, n, note, date, goalEl); return; }
     var entry = { id: uid(), d: date, t: s.t, n: note, a: n };
@@ -495,6 +499,16 @@ ul.list li:first-child { border-top: 0; }
   }
 
   el.addEventListener("submit", function (ev) { ev.preventDefault(); submitForm(); });
+  function fitViewport() {
+    var v = window.visualViewport, sc = document.querySelector(".scrim");
+    if (!v || !sc) return;
+    sc.style.top = v.offsetTop + "px"; sc.style.bottom = "auto"; sc.style.height = v.height + "px";
+  }
+  if (window.visualViewport) { window.visualViewport.addEventListener("resize", fitViewport); window.visualViewport.addEventListener("scroll", fitViewport); }
+  el.addEventListener("focusin", function (ev) {
+    var t = ev.target;
+    if (t && (t.id === "f-note" || t.id === "f-amount" || t.id === "f-date")) setTimeout(function () { fitViewport(); try { t.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} }, 300);
+  });
   el.addEventListener("input", function (ev) {
     if (ev.target.id !== "f-note" || !state.sheet) return;
     var box = document.getElementById("chips"), tsel = document.getElementById("f-type");
