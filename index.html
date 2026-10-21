@@ -170,7 +170,7 @@ ul.list li:first-child { border-top: 0; }
   var SHORTCUT = "Cutz Cash opslaan";
   var CAN_SYNC = !(window.claude && window.claude.use);
   var memoryOnly = false;
-  var state = { entries: [], shown: 6, openId: null, confirmId: null, sheet: null, menu: false, sync: false, kit: false, error: "", note: "", goals: [GOAL] };
+  var state = { entries: [], shown: 6, openId: null, confirmId: null, sheet: null, menu: false, sync: CAN_SYNC, kit: false, error: "", note: "", goals: [GOAL] };
 
   function pad(n) { return (n < 10 ? "0" : "") + n; }
   function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
@@ -197,7 +197,7 @@ ul.list li:first-child { border-top: 0; }
     state.entries = examples();
   }
   function load() {
-    try { state.sync = localStorage.getItem("cutzcash.sync") === "1"; state.kit = localStorage.getItem("cutzcash.kit") === "1"; } catch (e) {}
+    try { state.kit = localStorage.getItem("cutzcash.kit") === "1"; } catch (e) {}
     try {
       var raw = localStorage.getItem(KEY);
       if (raw) {
@@ -363,7 +363,6 @@ ul.list li:first-child { border-top: 0; }
     var h = '<div class="scrim" data-act="close-bg"><div class="sheet" role="dialog" aria-label="Opties"><div class="pole"></div><h3>Opties</h3><div class="menu">';
     h += '<button class="opt" data-act="klanten">Klanten<small>Wie komt hoe vaak, en wanneer was de laatste keer</small></button>';
     h += '<button class="opt" data-act="export">Bewaar een kopie<small>Een bestand voor Excel: datum, soort, omschrijving, bedrag</small></button>';
-    if (CAN_SYNC) h += '<button class="opt" data-act="sync">iCloud-koppeling: ' + (state.sync ? "aan" : "uit") + '<small>Stuurt elke nieuwe invoer naar de Opdracht "' + SHORTCUT + '" op deze telefoon</small></button>';
     h += '<button class="opt" data-act="kit">Barber kit van vrij geld af: ' + (state.kit ? "aan" : "uit") + '<small>Aan als je je spullen zelf betaalt. Uit zolang iemand anders ze betaalt.</small></button>';
     if (hasEx) h += '<button class="opt" data-act="clear-examples">Begin met eigen gegevens<small>Haalt de voorbeelden weg</small></button>';
     h += "</div>";
@@ -626,11 +625,6 @@ ul.list li:first-child { border-top: 0; }
       case "clear-examples":
         state.entries = state.entries.filter(function (e) { return !e.ex; }); state.menu = false;
         persist(); break;
-      case "sync":
-        state.sync = !state.sync;
-        try { localStorage.setItem("cutzcash.sync", state.sync ? "1" : "0"); } catch (e) {}
-        state.note = state.sync ? 'Aan. De Opdracht "' + SHORTCUT + '" moet bestaan, anders opent Opdrachten met een foutmelding. De invoer blijft in de app staan.' : "Uit.";
-        break;
       case "kit":
         state.kit = !state.kit;
         try { localStorage.setItem("cutzcash.kit", state.kit ? "1" : "0"); } catch (e) {}
