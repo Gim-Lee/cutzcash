@@ -170,7 +170,7 @@ ul.list li:first-child { border-top: 0; }
   var SHORTCUT = "Cutz Cash opslaan";
   var CAN_SYNC = !(window.claude && window.claude.use);
   var memoryOnly = false;
-  var state = { entries: [], showAll: false, openId: null, confirmId: null, sheet: null, menu: false, sync: false, kit: false, error: "", note: "", goals: [GOAL] };
+  var state = { entries: [], shown: 6, openId: null, confirmId: null, sheet: null, menu: false, sync: false, kit: false, error: "", note: "", goals: [GOAL] };
 
   function pad(n) { return (n < 10 ? "0" : "") + n; }
   function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
@@ -373,7 +373,7 @@ ul.list li:first-child { border-top: 0; }
 
   function render() {
     var t = totals(), list = sorted();
-    var shown = state.showAll ? list : list.slice(0, 6);
+    var shown = list.slice(0, state.shown);
     var hasEx = state.entries.some(function (e) { return e.ex; });
     var h = '<header><div class="brand"><img src="' + LOGO + '" alt=""><h1>Cutz Cash</h1></div><button class="link" data-act="menu">Opties</button></header>';
     if (memoryOnly) h += '<div class="banner">Opslaan op deze telefoon lukt in dit venster niet. Wat je invult is weg zodra je de pagina sluit.</div>';
@@ -390,10 +390,12 @@ ul.list li:first-child { border-top: 0; }
     h += "<h2>LAATSTE INVOER</h2>";
     h += list.length ? '<ul class="list">' + shown.map(renderRow).join("") + "</ul>"
                      : '<div class="empty">Nog niets ingevuld. Tik op Knipbeurt zodra je geld hebt gekregen.</div>';
-    if (list.length > 6) h += '<button class="link more" data-act="more">' + (state.showAll ? "Toon minder" : "Toon alles (" + list.length + ")") + "</button>";
+    if (list.length > state.shown) h += '<button class="link more" data-act="more">Toon meer</button>";
+    if (state.shown > 6) h += '<button class="link more" data-act="less">Toon minder</button>';
     h += '<p class="foot">' + (CAN_SYNC && state.sync ? "Je invoer staat op deze telefoon en wordt ook naar je iCloud-bestand gestuurd." : "Je invoer staat alleen op deze telefoon. Bewaar af en toe een kopie via Opties.") + "</p>";
     el.innerHTML = h + renderSheet() + renderMenu() + renderKlanten();
     fitViewport();
+    flushSend();
     if (state.sheet && state.sheet.focus) { state.sheet.focus = false; var a = document.getElementById("f-amount"); if (a) a.focus(); }
   }
 
@@ -413,6 +415,9 @@ ul.list li:first-child { border-top: 0; }
       window.location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=" + encodeURIComponent(lines.join("\n"));
     } catch (err) {}
   }
+  var toSend = [];
+  function queueLines(lines) { toSend = toSend.concat(lines); }
+  function flushSend() { if (!toSend.length) return; var l = toSend; toSend = []; setTimeout(function () { sendLines(l); }, 60); }
   function undoLine(e) { return csvLine({ d: e.d, t: e.t, n: e.n, a: e.a === 0 ? -0.001 : -e.a }); }
   function csvText() {
     var rows = ["Datum;Soort;Omschrijving;Bedrag"];
@@ -473,10 +478,10 @@ ul.list li:first-child { border-top: 0; }
       upd.s = true;
     }
     state.entries = state.entries.map(function (x) { return x.id === old.id ? upd : x; });
+    if (lines.length) queueLines(lines);
     persist();
     state.sheet = null; state.error = ""; state.openId = null;
     render();
-    if (lines.length) sendLines(lines);
   }
   function submitForm() {
     var s = state.sheet; if (!s) return;
@@ -501,10 +506,10 @@ ul.list li:first-child { border-top: 0; }
       entry.n = state.goals[gi].name; entry.g = gi;
     }
     state.entries.push(entry);
+    if (CAN_SYNC && state.sync) queueLines([csvLine(entry)]);
     persist();
     state.sheet = null; state.error = "";
     render();
-    if (CAN_SYNC && state.sync) sendLines([csvLine(entry)]);
   }
 
   el.addEventListener("submit", function (ev) { ev.preventDefault(); submitForm(); });
@@ -605,7 +610,8 @@ ul.list li:first-child { border-top: 0; }
       case "close": state.sheet = null; state.menu = false; state.klanten = false; state.note = ""; state.error = ""; break;
       case "menu": state.menu = true; state.note = ""; break;
       case "klanten": state.menu = false; state.klanten = true; break;
-      case "more": state.showAll = !state.showAll; break;
+      case "more": state.shown += 5; break;
+      case "less": state.shown = 6; break;
       case "toggle": state.openId = state.openId === id ? null : id; state.confirmId = null; break;
       case "del": state.confirmId = id; break;
       case "del-no": state.confirmId = null; break;
@@ -615,7 +621,7 @@ ul.list li:first-child { border-top: 0; }
         break;
       case "del-yes":
         var ed = state.entries.filter(function (x) { return x.id === id; })[0];
-        if (ed && !ed.ex && CAN_SYNC && state.sync && ed.s) pending = [undoLine(ed)];
+        if (ed && !ed.ex && CAN_SYNC && state.sync && ed.s) queueLines([undoLine(ed)]);
         state.entries = state.entries.filter(function (e) { return e.id !== id; }); state.openId = null; state.confirmId = null; persist(); break;
       case "clear-examples":
         state.entries = state.entries.filter(function (e) { return !e.ex; }); state.menu = false;
