@@ -390,7 +390,7 @@ ul.list li:first-child { border-top: 0; }
     h += "<h2>LAATSTE INVOER</h2>";
     h += list.length ? '<ul class="list">' + shown.map(renderRow).join("") + "</ul>"
                      : '<div class="empty">Nog niets ingevuld. Tik op Knipbeurt zodra je geld hebt gekregen.</div>';
-    if (list.length > state.shown) h += '<button class="link more" data-act="more">Toon meer</button>";
+    if (list.length > state.shown) h += '<button class="link more" data-act="more">Toon meer</button>';
     if (state.shown > 6) h += '<button class="link more" data-act="less">Toon minder</button>';
     h += '<p class="foot">' + (CAN_SYNC && state.sync ? "Je invoer staat op deze telefoon en wordt ook naar je iCloud-bestand gestuurd." : "Je invoer staat alleen op deze telefoon. Bewaar af en toe een kopie via Opties.") + "</p>";
     el.innerHTML = h + renderSheet() + renderMenu() + renderKlanten();
