@@ -362,7 +362,6 @@ ul.list li:first-child { border-top: 0; }
     var hasEx = state.entries.some(function (e) { return e.ex; });
     var h = '<div class="scrim" data-act="close-bg"><div class="sheet" role="dialog" aria-label="Opties"><div class="pole"></div><h3>Opties</h3><div class="menu">';
     h += '<button class="opt" data-act="klanten">Klanten<small>Wie komt hoe vaak, en wanneer was de laatste keer</small></button>';
-    h += '<button class="opt" data-act="export">Bewaar een kopie<small>Een bestand voor Excel: datum, soort, omschrijving, bedrag</small></button>';
     h += '<button class="opt" data-act="kit">Barber kit van vrij geld af: ' + (state.kit ? "aan" : "uit") + '<small>Aan als je je spullen zelf betaalt. Uit zolang iemand anders ze betaalt.</small></button>';
     if (hasEx) h += '<button class="opt" data-act="clear-examples">Begin met eigen gegevens<small>Haalt de voorbeelden weg</small></button>';
     h += "</div>";
@@ -391,7 +390,7 @@ ul.list li:first-child { border-top: 0; }
                      : '<div class="empty">Nog niets ingevuld. Tik op Knipbeurt zodra je geld hebt gekregen.</div>';
     if (list.length > state.shown) h += '<button class="link more" data-act="more">Toon meer</button>';
     if (state.shown > 6) h += '<button class="link more" data-act="less">Toon minder</button>';
-    h += '<p class="foot">' + (CAN_SYNC && state.sync ? "Je invoer staat op deze telefoon en wordt ook naar je iCloud-bestand gestuurd." : "Je invoer staat alleen op deze telefoon. Bewaar af en toe een kopie via Opties.") + "</p>";
+    h += '<p class="foot">' + (CAN_SYNC && state.sync ? "Je invoer staat op deze telefoon en wordt ook naar je iCloud-bestand gestuurd." : "Je invoer staat alleen op deze telefoon.") + "</p>";
     el.innerHTML = h + renderSheet() + renderMenu() + renderKlanten();
     fitViewport();
     flushSend();
@@ -418,42 +417,6 @@ ul.list li:first-child { border-top: 0; }
   function queueLines(lines) { toSend = toSend.concat(lines); }
   function flushSend() { if (!toSend.length) return; var l = toSend; toSend = []; setTimeout(function () { sendLines(l); }, 60); }
   function undoLine(e) { return csvLine({ d: e.d, t: e.t, n: e.n, a: e.a === 0 ? -0.001 : -e.a }); }
-  function csvText() {
-    var rows = ["Datum;Soort;Omschrijving;Bedrag"];
-    sorted().reverse().filter(function (e) { return !e.ex; }).forEach(function (e) {
-      rows.push(csvLine(e));
-    });
-    return "﻿" + rows.join("\r\n");
-  }
-
-  async function doExport() {
-    state.note = "";
-    if (!state.entries.some(function (e) { return !e.ex; })) { state.note = "Er is nog niets om te bewaren. Voorbeelden worden niet meegenomen."; render(); return; }
-    var name = "cutzcash-" + todayStr() + ".csv", text = csvText();
-    try {
-      var dl = null;
-      try { dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) { dl = null; }
-      if (dl) {
-        await dl.save({ filename: name, data: text });
-        state.note = "Kopie bewaard.";
-      } else {
-        var file = new File([text], name, { type: "text/csv" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Cutz Cash" });
-          state.note = "Kopie gedeeld.";
-        } else {
-          var a = document.createElement("a");
-          a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
-          a.download = name; document.body.appendChild(a); a.click(); a.remove();
-          state.note = "Kopie gedownload.";
-        }
-      }
-    } catch (err) {
-      state.note = err && (err.code === "declined" || err.name === "AbortError") ? "Niet bewaard." : "Bewaren is niet gelukt.";
-    }
-    render();
-  }
-
   function saveEdit(s, n, note, date, goalEl) {
     var old = state.entries.filter(function (x) { return x.id === s.edit; })[0];
     if (!old) { state.sheet = null; render(); return; }
@@ -630,7 +593,6 @@ ul.list li:first-child { border-top: 0; }
         try { localStorage.setItem("cutzcash.kit", state.kit ? "1" : "0"); } catch (e) {}
         state.note = state.kit ? "Aan. Aankopen met Barber kit gaan van het vrije bedrag af. Zet het in het Excel-overzicht (tabblad Vandaag) ook op Ja." : "Uit. Barber kit telt niet mee in het vrije bedrag. Zet het in het Excel-overzicht (tabblad Vandaag) ook op Nee.";
         break;
-      case "export": doExport(); return;
     }
     render();
     if (pending) sendLines(pending);
